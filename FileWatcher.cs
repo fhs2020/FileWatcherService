@@ -77,9 +77,9 @@ public partial class FileWatcher : ServiceBase
     {
         string smtpServer = "smtp.office365.com";
         int smtpPort = 587;
-        string fromEmail = "cloudgridnetworksolutions@outlook.com";
-        string password = "baller100";
-        string toEmail = "flavioh007@gmail.com";
+        string fromEmail = "xxxxx@outlook.com";
+        string password = "xxxxx";
+        string toEmail = "xxxx@gmail.com";
 
         using (var client = new SmtpClient(smtpServer, smtpPort))
         {
