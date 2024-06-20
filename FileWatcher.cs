@@ -4,10 +4,13 @@ using System.Net;
 using System.Net.Mail;
 using System.ServiceProcess;
 using OfficeOpenXml;
+using System.Configuration;
 
 public partial class FileWatcher : ServiceBase
 {
     private FileSystemWatcher watcher;
+    private string watchFolderPath;
+    private string logFolderPath;
 
     public FileWatcher()
     {
@@ -17,9 +20,18 @@ public partial class FileWatcher : ServiceBase
     private void InitializeComponent()
     {
         this.ServiceName = "FileWatcherService";
+        watchFolderPath = ConfigurationManager.AppSettings["WatchFolderPath"];
+        logFolderPath = ConfigurationManager.AppSettings["LogFolderPath"];
+
+        // Ensure the log directory exists
+        if (!Directory.Exists(logFolderPath))
+        {
+            Directory.CreateDirectory(logFolderPath);
+        }
+
         watcher = new FileSystemWatcher
         {
-            Path = @"C:\Home_File",
+            Path = watchFolderPath,
             Filter = "*.txt",
             EnableRaisingEvents = true
         };
@@ -29,23 +41,28 @@ public partial class FileWatcher : ServiceBase
     protected override void OnStart(string[] args)
     {
         watcher.EnableRaisingEvents = true;
+        Log("Service started.");
     }
 
     protected override void OnStop()
     {
         watcher.EnableRaisingEvents = false;
+        Log("Service stopped.");
     }
 
     private void OnCreated(object sender, FileSystemEventArgs e)
     {
         try
         {
+            Log($"File created: {e.FullPath}");
             string excelPath = ConvertTextToExcel(e.FullPath);
+            Log($"Converted to Excel: {excelPath}");
             SendEmail(excelPath);
+            Log("Email sent successfully.");
         }
         catch (Exception ex)
         {
-            throw new Exception(ex.Message);
+            Log($"Error: {ex.Message}");
         }
     }
 
@@ -75,11 +92,11 @@ public partial class FileWatcher : ServiceBase
 
     private void SendEmail(string attachmentPath)
     {
-        string smtpServer = "smtp.office365.com";
-        int smtpPort = 587;
-        string fromEmail = "xxxxx@outlook.com";
-        string password = "xxxxx";
-        string toEmail = "xxxx@gmail.com";
+        string fromEmail = ConfigurationManager.AppSettings["FromEmail"];
+        string password = ConfigurationManager.AppSettings["Password"];
+        string toEmail = ConfigurationManager.AppSettings["ToEmail"];
+        string smtpServer = ConfigurationManager.AppSettings["SmtpServer"];
+        int smtpPort = int.Parse(ConfigurationManager.AppSettings["SmtpPort"]);
 
         using (var client = new SmtpClient(smtpServer, smtpPort))
         {
@@ -112,7 +129,7 @@ public partial class FileWatcher : ServiceBase
 
     private void Log(string message)
     {
-        string logFilePath = @"C:\Home_File\service_log.txt";
+        string logFilePath = Path.Combine(logFolderPath, "service_log.txt");
         using (StreamWriter writer = new StreamWriter(logFilePath, true))
         {
             writer.WriteLine($"{DateTime.Now}: {message}");
